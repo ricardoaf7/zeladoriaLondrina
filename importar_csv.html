@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar CSV - Zeladoria Londrina</title>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #4CAF50;
+            background-color: #f9f9f9;
+        }
+        .upload-area.dragover {
+            border-color: #4CAF50;
+            background-color: #e8f5e8;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .progress {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f0f0f0;
+        }
+        .log {
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .log-item {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-success { color: #4CAF50; }
+        .log-error { color: #f44336; }
+        .log-info { color: #2196F3; }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .stat {
+            text-align: center;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            min-width: 100px;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .config-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Importar Dados CSV</h1>
+        <p>Importe os dados de áreas para o sistema de roçagem</p>
+        
+        <div class="config-section">
+            <h3>Configuração do Supabase</h3>
+            <label>URL do Supabase:</label>
+            <input type="text" id="supabaseUrl" placeholder="https://seu-projeto.supabase.co" value="https://jwdflbhefsvxesojvmjb.supabase.co">
+            
+            <label>Anon Key:</label>
+            <input type="text" id="supabaseKey" placeholder="Sua chave anon do Supabase">
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Arraste o arquivo CSV aqui ou clique para selecionar</p>
+            <input type="file" id="fileInput" accept=".csv" />
+        </div>
+
+        <div id="fileInfo" style="display: none;">
+            <p>Arquivo selecionado: <strong id="fileName"></strong></p>
+            <button onclick="processarCSV()">🚀 Importar Dados</button>
+            <button onclick="limparTudo()">🗑️ Limpar</button>
+        </div>
+
+        <div id="progress" class="progress" style="display: none;">
+            <h3>Progresso da Importação</h3>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number" id="totalLinhas">0</div>
+                    <div>Total</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="importadas">0</div>
+                    <div>Importadas</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="erros">0</div>
+                    <div>Erros</div>
+                </div>
+            </div>
+            <div style="margin: 10px 0;">
+                <label>Progresso:</label>
+                <div style="background-color: #ddd; border-radius: 5px; height: 20px; overflow: hidden;">
+                    <div id="progressBar" style="background-color: #4CAF50; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+                <small id="progressText">0%</small>
+            </div>
+        </div>
+
+        <div id="log" class="log" style="display: none;"></div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let supabase = null;
+
+        // Função para corrigir caracteres especiais
+        function corrigirCaracteres(texto) {
+            if (!texto) return texto;
+            
+            const correcoes = {
+                'Ã§': 'ç', 'Ã£': 'ã', 'Ã³': 'ó', 'Ã©': 'é', 'Ã': 'í',
+                'Ã¢': 'â', 'Ã´': 'ô', 'Ãª': 'ê', 'Ã¹': 'ú', 'Ã¼': 'ü',
+                'Ã±': 'ñ', 'Ã': 'à', 'Ã¡': 'á', 'Ã§': 'ç', 'Ã£': 'ã'
+            };
+            
+            let corrigido = texto;
+            for (const [errado, certo] of Object.entries(correcoes)) {
+                corrigido = corrigido.replace(new RegExp(errado, 'g'), certo);
+            }
+            
+            return corrigido;
+        }
+
+        // Configurar eventos de upload
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect({ target: { files: files } });
+            }
+        });
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileInfo').style.display = 'block';
+                
+                // Ler o arquivo
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const csvText = e.target.result;
+                    
+                    // Parsear CSV
+                    Papa.parse(csvText, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            csvData = results.data;
+                            console.log(`📊 CSV carregado com ${csvData.length} linhas`);
+                            addLog(`📊 Arquivo CSV carregado com ${csvData.length} linhas`, 'info');
+                        },
+                        error: function(error) {
+                            addLog(`❌ Erro ao ler CSV: ${error.message}`, 'error');
+                        }
+                    });
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+        }
+
+        async function processarCSV() {
+            const supabaseUrl = document.getElementById('supabaseUrl').value;
+            const supabaseKey = document.getElementById('supabaseKey').value;
+            
+            if (!supabaseUrl || !supabaseKey) {
+                alert('Por favor, preencha a URL e a chave do Supabase');
+                return;
+            }
+
+            if (csvData.length === 0) {
+                alert('Por favor, selecione um arquivo CSV primeiro');
+                return;
+            }
+
+            // Inicializar Supabase
+            const { createClient } = window.supabase;
+            supabase = createClient(supabaseUrl, supabaseKey);
+
+            // Mostrar progresso
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('log').style.display = 'block';
+            document.getElementById('totalLinhas').textContent = csvData.length;
+
+            let importadas = 0;
+            let erros = 0;
+
+            addLog('🚀 Iniciando importação...', 'info');
+
+            // Processar em lotes de 10 para não sobrecarregar
+            const batchSize = 10;
+            for (let i = 0; i < csvData.length; i += batchSize) {
+                const batch = csvData.slice(i, i + batchSize);
+                
+                for (const record of batch) {
+                    try {
+                        // Corrigir caracteres especiais
+                        const enderecoCorrigido = corrigirCaracteres(record.endereco);
+                        const bairroCorrigido = corrigirCaracteres(record.bairro);
+                        const tipoCorrigido = corrigirCaracteres(record.tipo);
+                        
+                        // Preparar dados
+                        const areaData = {
+                            id: parseInt(record.id) || undefined,
+                            ordem: record.ordem ? parseInt(record.ordem) : null,
+                            sequencia_cadastro: record.sequencia_cadastro ? parseInt(record.sequencia_cadastro) : null,
+                            tipo: tipoCorrigido || 'Roçagem',
+                            endereco: enderecoCorrigido || '',
+                            bairro: bairroCorrigido || '',
+                            metragem_m2: record.metragem_m2 ? parseFloat(record.metragem_m2) : null,
+                            lat: parseFloat(record.lat) || 0,
+                            lng: parseFloat(record.lng) || 0,
+                            lote: record.lote ? parseInt(record.lote) : 1,
+                            status: record.status || 'Pendente',
+                            history: [],
+                            polygon: null,
+                            scheduled_date: record.scheduled_date || null,
+                            proxima_previsao: record.proxima_previsao || null,
+                            ultima_rocagem: record.ultima_rocagem || null,
+                            manual_schedule: record.manual_schedule === 'true',
+                            days_to_complete: record.days_to_complete ? parseInt(record.days_to_complete) : 1,
+                            servico: 'rocagem',
+                            registrado_por: record.registrado_por || 'importacao_csv',
+                            data_registro: new Date().toISOString(),
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        };
+
+                        // Inserir no Supabase
+                        const { data, error } = await supabase
+                            .from('service_areas')
+                            .insert([areaData])
+                            .select();
+
+                        if (error) {
+                            addLog(`❌ Erro ${record.id}: ${error.message}`, 'error');
+                            erros++;
+                        } else {
+                            addLog(`✅ Importada: ${enderecoCorrigido}, ${bairroCorrigido}`, 'success');
+                            importadas++;
+                        }
+
+                    } catch (err) {
+                        addLog(`❌ Erro geral ${record.id}: ${err.message}`, 'error');
+                        erros++;
+                    }
+                }
+
+                // Atualizar progresso
+                const progresso = Math.round(((i + batch.length) / csvData.length) * 100);
+                document.getElementById('progressBar').style.width = progresso + '%';
+                document.getElementById('progressText').textContent = progresso + '%';
+                document.getElementById('importadas').textContent = importadas;
+                document.getElementById('erros').textContent = erros;
+
+                // Pequena pausa entre lotes
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            addLog(`\n📈 IMPORTAÇÃO CONCLUÍDA!`, 'info');
+            addLog(`✅ Importadas com sucesso: ${importadas}`, 'success');
+            addLog(`❌ Erros: ${erros}`, 'error');
+            addLog(`📊 Total processado: ${importadas + erros}`, 'info');
+        }
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('log');
+            const logItem = document.createElement('div');
+            logItem.className = `log-item log-${type}`;
+            logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(logItem);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function limparTudo() {
+            csvData = [];
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('progress').style.display = 'none';
+            document.getElementById('log').style.display = 'none';
+            document.getElementById('log').innerHTML = '';
+            fileInput.value = '';
+        }
+    </script>
+</body>
+</html>
