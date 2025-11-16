@@ -5,6 +5,13 @@ import { z } from "zod";
 import multer from "multer";
 import * as fs from "fs";
 import * as path from "path";
+import mapRoutes from "./routes/map-optimization";
+import coletaRoutes from "./routes/coleta-publica";
+import coletaHtmlRouter from "./routes/coleta-publica-html";
+import dashboardHtmlRouter from "./routes/dashboard-eficiencia-html";
+import ocrImportRouter from "./routes/ocr-import";
+import mapPerformanceRouter from "./routes/map-performance";
+import ocrImportHtmlRouter from "./routes/ocr-import";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -12,6 +19,10 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check/ping endpoint
+  app.get("/ping", (req, res) => {
+    res.json({ message: "Pong!" });
+  });
   // Endpoint de backup: exportar todos os dados em JSON
   app.get("/api/backup", async (req, res) => {
     try {
@@ -768,6 +779,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Rotas otimizadas do mapa (adicionadas para performance)
+  app.use("/api/map", mapRoutes);
+  
+  // API pública de consulta de coleta
+  app.use("/api/coleta", coletaRoutes);
+  
+  // Páginas HTML - Rotas principais
+  app.use("/dashboard-eficiencia", dashboardHtmlRouter);
+  app.use("/ocr-import", ocrImportHtmlRouter);
+  app.use("/map-performance", mapPerformanceRouter);
+  app.use("/consulta-coleta", coletaHtmlRouter);
 
   const httpServer = createServer(app);
 

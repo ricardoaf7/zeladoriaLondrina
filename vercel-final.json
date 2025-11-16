@@ -3,7 +3,7 @@
   "name": "zeladoria-londrina",
   "alias": ["zeladoria-londrina.vercel.app"],
   "buildCommand": "npm run build:prod",
-  "outputDirectory": "dist/public",
+  "outputDirectory": "dist/client",
   "framework": "vite",
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
@@ -49,6 +49,18 @@
   "routes": [
     {
       "src": "/api/(.*)",
+      "dest": "server/index.ts"
+    },
+    {
+      "src": "/dashboard-eficiencia",
+      "dest": "server/index.ts"
+    },
+    {
+      "src": "/consulta-coleta",
+      "dest": "server/index.ts"
+    },
+    {
+      "src": "/map-performance",
       "dest": "server/index.ts"
     },
     {
@@ -100,40 +112,8 @@
       "dest": "server/index.ts"
     },
     {
-      "src": "/dashboard-eficiencia",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/consulta-coleta",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/map-performance",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/ocr-import",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/dashboard-eficiencia",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/consulta-coleta",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/map-performance",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/ocr-import",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/((?!api|dashboard-eficiencia|consulta-coleta|map-performance|ocr-import|assets|dist|static|.*\\.js$|.*\\.css$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.ico$|.*\\.woff$|.*\\.woff2$|.*\\.ttf$).*)",
-      "dest": "/dist/public/index.html"
+      "src": "/(.*)",
+      "dest": "/dist/client/$1"
     }
   ],
   
@@ -213,14 +193,14 @@
       "destination": "/server/index.ts"
     },
     {
-      "source": "/ocr-import",
+      "source": "/api/status",
       "destination": "/server/index.ts"
     },
     {
-      "source": "/((?!api|dashboard-eficiencia|consulta-coleta|map-performance|ocr-import|assets|dist|static|.*\\.js$|.*\\.css$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.ico$|.*\\.woff$|.*\\.woff2$|.*\\.ttf$).*)",
-      "destination": "/dist/public/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ]
+  ],
   
   "redirects": [
     {

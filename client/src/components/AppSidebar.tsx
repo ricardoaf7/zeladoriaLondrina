@@ -13,7 +13,12 @@ import {
   Sparkles,
   Wind,
   Package,
-  Upload
+  Upload,
+  Zap,
+  BarChart3,
+  Search,
+  Calendar,
+  Camera
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -309,15 +314,41 @@ export function AppSidebar({
 
         {/* Botão de Importação CSV */}
         {showImportButton && (
-          <div className="mt-auto pt-4 border-t border-border">
+          <div className="mt-auto pt-4 border-t border-border space-y-2">
             <Link
-              to="/import-csv"
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors hover-elevate active-elevate-2 text-foreground/80 hover:text-foreground bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 border border-blue-200 dark:border-blue-800"
-              data-testid="import-csv-button"
-            >
-              <Upload className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-              <span className="text-left font-medium">Importar CSV</span>
-            </Link>
+                to="/import-csv"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors hover-elevate active-elevate-2 text-foreground/80 hover:text-foreground bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 border border-blue-200 dark:border-blue-800"
+                data-testid="import-csv-button"
+              >
+                <Upload className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <span className="text-left font-medium">Importar CSV</span>
+              </Link>
+              <Link
+                to="/ocr-import"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors hover-elevate active-elevate-2 text-foreground/80 hover:text-foreground bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 border border-blue-200 dark:border-blue-800"
+                data-testid="import-ocr-button"
+              >
+                <Camera className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <span className="text-left font-medium">Importar OCR</span>
+              </Link>
+            
+            <Link
+                to="/map-performance"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors hover-elevate active-elevate-2 text-foreground/80 hover:text-foreground bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50 border border-green-200 dark:border-green-800"
+                data-testid="performance-demo-button"
+              >
+                <Zap className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <span className="text-left font-medium">Demo Performance</span>
+              </Link>
+              
+              <Link
+                to="/consulta-coleta"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm transition-colors hover-elevate active-elevate-2 text-foreground/80 hover:text-foreground bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50 border border-blue-200 dark:border-blue-800"
+                data-testid="consulta-coleta-button"
+              >
+                <Search className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <span className="text-left font-medium">Consulta Coleta</span>
+              </Link>
           </div>
         )}
     </>

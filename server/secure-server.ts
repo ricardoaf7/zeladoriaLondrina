@@ -1,3 +1,8 @@
+/**
+ * Servidor Express Seguro com Middlewares de Proteção
+ * Implementa todas as camadas de segurança necessárias
+ */
+
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -8,11 +13,31 @@ import {
   inputValidation, 
   securityLogger,
   secureCors,
-  bruteForceProtection
+  bruteForceProtection,
+  outputSanitization
 } from "./middleware/security";
+import dotenv from 'dotenv';
+
+// Carregar variáveis de ambiente
+dotenv.config();
 
 const app = express();
 
+// Configuração de segurança
+const securityConfig = {
+  rateLimit: {
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 1000, // limite de 1000 requisições por IP
+    message: 'Muitas requisições deste IP, tente novamente mais tarde'
+  },
+  bruteForce: {
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    maxAttempts: 5,
+    message: 'Muitas tentativas de login. Tente novamente mais tarde.'
+  }
+};
+
+// Declaração de tipos
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
@@ -28,11 +53,7 @@ app.use(securityHeaders);
 app.use(secureCors);
 
 // Rate limiting global
-app.use(rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 1000, // limite de 1000 requisições por IP
-  message: 'Muitas requisições deste IP, tente novamente mais tarde'
-}));
+app.use(rateLimiter(securityConfig.rateLimit));
 
 // Proteção contra brute force no login
 app.use(bruteForceProtection);
@@ -46,7 +67,10 @@ app.use(csrfProtection);
 // Validação de entrada contra injeção
 app.use(inputValidation);
 
-// Body parsers
+// Sanitização de saída
+app.use(outputSanitization);
+
+// Body parsers com limites de tamanho
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
@@ -55,6 +79,7 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+// Logging de requisições
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -85,35 +110,52 @@ app.use((req, res, next) => {
   next();
 });
 
+// ===== INICIALIZAÇÃO DO SERVIDOR =====
+
 (async () => {
   const server = await registerRoutes(app);
 
+  // Error handling
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Nunca expor detalhes de erro em produção
+    const errorResponse = {
+      message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : message,
+      ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+    };
+
+    res.status(status).json(errorResponse);
+    
+    // Log do erro para monitoramento
+    console.error('🚨 Server Error:', {
+      status,
+      message: err.message,
+      stack: err.stack,
+      timestamp: new Date().toISOString()
+    });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Setup Vite ou static serving
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Port configuration
   const port = parseInt(process.env.PORT || '5000', 10);
+  
   server.listen({
     port,
     host: "0.0.0.0",
   }, () => {
-    log(`serving on port ${port}`);
+    log(`🛡️  Secure server serving on port ${port}`);
+    log(`🔒 Security middlewares active`);
+    log(`📊 Rate limiting: ${securityConfig.rateLimit.max} req/15min`);
+    log(`🚪 Brute force protection: ${securityConfig.bruteForce.maxAttempts} attempts/15min`);
   });
 })();
+
+export default app;
