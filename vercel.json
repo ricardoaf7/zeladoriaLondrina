@@ -265,3 +265,11 @@
     }
   }
 }
+    {
+      "src": "/import-csv",
+      "dest": "server/index.ts"
+    },
+    {
+      "source": "/import-csv",
+      "destination": "/server/index.ts"
+    },

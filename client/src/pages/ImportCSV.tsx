@@ -31,7 +31,7 @@ export default function ImportCSV() {
     toast.info(`Processando ${total} linhas...`)
     const batches = chunk(items, 50)
     let processed = 0
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+    const apiBase = import.meta.env.VITE_API_BASE_URL || window.location.origin
     for (let i = 0; i < batches.length; i++) {
       const batchData = batches[i]
       if (batchData.length === 0) continue
