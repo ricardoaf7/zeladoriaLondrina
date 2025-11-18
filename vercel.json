@@ -2,7 +2,7 @@
   "version": 2,
   "name": "zeladoria-londrina",
   "alias": ["zeladoria-londrina.vercel.app"],
-  "buildCommand": "npm run build:prod",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
   "framework": "vite",
   "installCommand": "npm ci",
@@ -24,29 +24,6 @@
       "maxDuration": 30
     }
   },
-  
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/client"
-      }
-    },
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "server/**",
-          "shared/**",
-          "supabase/**"
-        ]
-      }
-    }
-  ],
-  
-  
   
   "headers": [
     {
@@ -109,29 +86,33 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/server/index.ts"
+      "destination": "/api/index"
+    },
+    {
+      "source": "/import-csv",
+      "destination": "/server/index"
     },
     {
       "source": "/dashboard-eficiencia",
-      "destination": "/server/index.ts"
+      "destination": "/server/index"
     },
     {
       "source": "/consulta-coleta",
-      "destination": "/server/index.ts"
+      "destination": "/server/index"
     },
     {
       "source": "/map-performance",
-      "destination": "/server/index.ts"
+      "destination": "/server/index"
     },
     {
       "source": "/ocr-import",
-      "destination": "/server/index.ts"
+      "destination": "/server/index"
     },
     {
       "source": "/((?!api|dashboard-eficiencia|consulta-coleta|map-performance|ocr-import|assets|dist|static|.*\\.js$|.*\\.css$|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.ico$|.*\\.woff$|.*\\.woff2$|.*\\.ttf$).*)",
       "destination": "/dist/public/index.html"
     }
-  ]
+  ],
   
   "redirects": [
     {
@@ -166,21 +147,5 @@
     }
   ],
   
-  "regions": ["gru1", "iad1"],
-  
-  "functions": {
-    "server/index.ts": {
-      "maxDuration": 30,
-      "memory": 1024,
-      "concurrency": 10
-    }
-  }
+  "regions": ["gru1", "iad1"]
 }
-    {
-      "src": "/import-csv",
-      "dest": "server/index.ts"
-    },
-    {
-      "source": "/import-csv",
-      "destination": "/server/index.ts"
-    },
